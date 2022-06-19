@@ -1,44 +1,86 @@
-var createScene = async function () {
+var createScene = function() {
+    // Create scene
+	var scene = new BABYLON.Scene(engine);
 
-    var scene = new BABYLON.Scene(engine);
-    var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
-    camera.setTarget(BABYLON.Vector3.Zero());
+    // Create simple sphere
+    var sphere = BABYLON.Mesh.CreateIcoSphere("sphere", {radius:0.2, flat:true, subdivisions: 1}, scene);
+    sphere.position.y = 3;
+    sphere.material = new BABYLON.StandardMaterial("sphere material",scene)
+
+    // Lights and camera
+    var light = new BABYLON.DirectionalLight("light", new BABYLON.Vector3(0, -0.5, 1.0), scene);
+    light.position = new BABYLON.Vector3(0, 5, -2);
+    var camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 4, 3, new BABYLON.Vector3(0, 3, 0), scene);
     camera.attachControl(canvas, true);
-    var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
-    light.intensity = 0.7;
-    var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
-    sphere.position.y = 1;
-
+    scene.activeCamera.beta += 0.8;
 
     // Default Environment
-    var environment = scene.createDefaultEnvironment({ enableGroundShadow: true });
+    var environment = scene.createDefaultEnvironment({ enableGroundShadow: true, groundYBias: 2.8 });
     environment.setMainColor(BABYLON.Color3.FromHexString("#74b9ff"))
-    environment.ground.parent.position.y = 0;
-    environment.ground.position.y = 0
+    
+    // Shadows
+    var shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
+    shadowGenerator.useBlurExponentialShadowMap = true;
+    shadowGenerator.blurKernel = 32;
+    shadowGenerator.addShadowCaster(sphere, true);
 
+    // Enable VR
+    var vrHelper = scene.createDefaultVRExperience({createDeviceOrientationCamera:false, useXR: true});
+    vrHelper.enableTeleportation({floorMeshes: [environment.ground]});
 
-    var defaultXRExperience = await scene.createDefaultXRExperienceAsync({
-      //  xrInput: defaultXRExperience.input,
-        floorMeshes: [environment.ground] /* Array of meshes to be used as landing points */
+    // Runs every frame to rotate the sphere
+    scene.onBeforeRenderObservable.add(()=>{
+        sphere.rotation.y += 0.0001*scene.getEngine().getDeltaTime();
+        sphere.rotation.x += 0.0001*scene.getEngine().getDeltaTime();
+    })
+
+    // GUI
+    var plane = BABYLON.Mesh.CreatePlane("plane", 1);
+    plane.position = new BABYLON.Vector3(0.4, 4, 0.4)
+    var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(plane);
+    var panel = new BABYLON.GUI.StackPanel();    
+    advancedTexture.addControl(panel);  
+    var header = new BABYLON.GUI.TextBlock();
+    header.text = "Color GUI";
+    header.height = "100px";
+    header.color = "white";
+    header.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    header.fontSize = "120"
+    panel.addControl(header); 
+    var picker = new BABYLON.GUI.ColorPicker();
+    picker.value = sphere.material.diffuseColor;
+    picker.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    picker.height = "350px";
+    picker.width = "350px";
+    picker.onValueChangedObservable.add(function(value) {
+        sphere.material.diffuseColor.copyFrom(value);
     });
-   let groundMaterial = new BABYLON.StandardMaterial("ground", scene);
-    groundMaterial.backFaceCulling = false;
-    groundMaterial.diffuseColor = BABYLON.Color3.Green();
-    groundMaterial.diffuseTexture = new BABYLON.Texture('textures/grass.png', scene);
+    panel.addControl(picker);
 
-    // simulate a second floor
-    const secondGround = environment.ground.clone();
-    secondGround.position.z = 10;
-    secondGround.position.y = -3;
-    secondGround.material = groundMaterial;
+    vrHelper.onAfterEnteringVRObservable.add(()=>{
+        if(scene.activeCamera === vrHelper.vrDeviceOrientationCamera){
+            BABYLON.FreeCameraDeviceOrientationInput.WaitForOrientationChangeAsync(1000).then(()=>{
+                // Successfully received sensor input
+            }).catch(()=>{
+                alert("Device orientation camera is being used but no sensor is found, prompt user to enable in safari settings");
+            })
+        }
+    })
 
-    // add the 3nd ground to the floor meshes array
-    defaultXRExperience.teleportation.addFloorMesh(secondGround);
-
-   // defaultXRExperience.teleportation.attach();
-    defaultXRExperience.pointerSelection.attach();
-   // const teleportation = defaultXRExperience.teleportation;
-
-
-    return scene;
+    
+    
+	return scene;
 };
+
+var colors = {
+        seaFoam: BABYLON.Color3.FromHexString("#16a085"),
+        green: BABYLON.Color3.FromHexString("#27ae60"),
+        blue: BABYLON.Color3.FromHexString("#2980b9"),
+        purple: BABYLON.Color3.FromHexString("#8e44ad"),
+        navy: BABYLON.Color3.FromHexString("#2c3e50"),
+        yellow: BABYLON.Color3.FromHexString("#f39c12"),
+        orange: BABYLON.Color3.FromHexString("#d35400"),
+        red: BABYLON.Color3.FromHexString("#c0392b"),
+        white: BABYLON.Color3.FromHexString("#bdc3c7"),
+        gray: BABYLON.Color3.FromHexString("#7f8c8d")
+    }
