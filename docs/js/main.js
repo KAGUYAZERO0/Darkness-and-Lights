@@ -18,29 +18,21 @@ function createScene() {
     const light = new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0,1,0),scene);
  
     // create a box
-    const box = BABYLON.MeshBuilder.CreateBox('box', {
-        size : 1
-    }, scene);
+    const box = BABYLON.MeshBuilder.CreateBox('box', {size : 1}, scene);
  
     // create a sphere
-    const sphere = BABYLON.MeshBuilder.CreateSphere('sphere', {
-        segments: 32,
-        diameter: 2,
-    }, scene);
+    const sphere = BABYLON.MeshBuilder.CreateSphere('sphere', { segments: 32, diameter: 2,}, scene);
     sphere.position = new BABYLON.Vector3(3,0,0);
  
     // create a plane
     const plane = BABYLON.MeshBuilder.CreatePlane('plane',{},scene);
     plane.position = new BABYLON.Vector3(-3,0,0);
     return scene;
- 
 }
  
 // create our scene
- 
 const scene = createScene();
  
 engine.runRenderLoop(() => {
     scene.render();
- 
 });
